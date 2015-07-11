@@ -102,7 +102,7 @@ func LoadData_FromFile(path string) (data []byte, err error) {
 	return ioutil.ReadFile(path)
 }
 
-func LoadText(addr string) (data []byte, err error) {
+func LoadData(addr string) (data []byte, err error) {
 	switch getDataSourceType(addr) {
 	case load_from_http:
 		return LoadData_FromHttp(addr)
