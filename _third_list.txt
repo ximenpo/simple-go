@@ -1,2 +1,3 @@
 mustache        https://github.com/hoisie/mustache
+redigo          https://github.com/garyburd/redigo
 simple-luago    https://github.com/ximenpo/simple-luago
