@@ -36,6 +36,11 @@ func (m *HandleMap) Del(seq HandleID) interface{} {
 	return nil
 }
 
+func (m *HandleMap) Clear(seq HandleID) {
+	m.data = make(map[HandleID]interface{})
+	m.seq_seed = 0
+}
+
 // 永远不会返回 0 或 0xFFFFFFFF(-1)
 func (m *HandleMap) newSeq() HandleID {
 	m.seq_seed++
