@@ -51,6 +51,21 @@ func (w *DataWriter) WriteUintData(size_tag uint, value uint64) (err error) {
 	}
 }
 
+func (w *DataWriter) WriteIntData(size_tag uint, value int64) (err error) {
+	switch size_tag {
+	case TAG_0:
+		return nil
+	case TAG_1:
+		return binary.Write(w.buf, binary.BigEndian, int8(value))
+	case TAG_2:
+		return binary.Write(w.buf, binary.BigEndian, int16(value))
+	case TAG_4:
+		return binary.Write(w.buf, binary.BigEndian, int32(value))
+	default:
+		return binary.Write(w.buf, binary.BigEndian, int64(value))
+	}
+}
+
 func (w *DataWriter) Write(value interface{}) (err error) {
 	V := reflect.ValueOf(value)
 	if V.Kind() == reflect.Ptr {
@@ -122,42 +137,20 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
-		switch tag.SizeTag {
-		case TAG_0:
-			return nil
-		case TAG_1:
-			return binary.Write(w.buf, binary.BigEndian, int8(V.Int()))
-		case TAG_2:
-			return binary.Write(w.buf, binary.BigEndian, int16(V.Int()))
-		case TAG_4:
-			return binary.Write(w.buf, binary.BigEndian, int32(V.Int()))
-		default:
-			return binary.Write(w.buf, binary.BigEndian, int64(V.Int()))
-		}
+		return w.WriteIntData(tag.SizeTag, V.Int())
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		tag := DataTag{TYPE_UINT, SizeTag(value), false}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
-		switch tag.SizeTag {
-		case TAG_0:
-			return nil
-		case TAG_1:
-			return binary.Write(w.buf, binary.BigEndian, uint8(V.Uint()))
-		case TAG_2:
-			return binary.Write(w.buf, binary.BigEndian, uint16(V.Uint()))
-		case TAG_4:
-			return binary.Write(w.buf, binary.BigEndian, uint32(V.Uint()))
-		default:
-			return binary.Write(w.buf, binary.BigEndian, uint64(V.Uint()))
-		}
+		return w.WriteUintData(tag.SizeTag, V.Uint())
 
 	case reflect.Float32, reflect.Float64:
 		if V.Kind() == reflect.Float32 {
-			tag = DataTag{TYPE_REAL, TAG_1, false}
+			tag = DataTag{TYPE_REAL, TAG_4, false}
 		} else {
-			tag = DataTag{TYPE_REAL, TAG_2, false}
+			tag = DataTag{TYPE_REAL, TAG_8, false}
 		}
 		if err = w.WriteTagData(tag); err != nil {
 			return
