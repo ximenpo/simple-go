@@ -90,6 +90,8 @@ func DataSizeTag(value interface{}) (ret uint) {
 		return TAG_4
 	case float64:
 		return TAG_8
+	default:
+		panic("unsupport tag size type:" + reflect.TypeOf(value).String())
 	}
-	return TAG_0
+	return
 }

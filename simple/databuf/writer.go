@@ -28,7 +28,7 @@ type DataWriter struct {
 	buf io.Writer
 }
 
-func NewWriter(buf io.Writer) *DataWriter {
+func NewDataWriter(buf io.Writer) *DataWriter {
 	return &DataWriter{buf}
 }
 
@@ -77,7 +77,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 	case reflect.Map:
 		keys := V.MapKeys()
 		length := len(keys)
-		tag := DataTag{TYPE_ARRAY, DataSizeTag(length), false}
+		tag := DataTag{TYPE_ARRAY, DataSizeTag(length), true}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
@@ -111,23 +111,23 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		}
 
 	case reflect.Struct:
-		length := V.NumField()
-		stVersion := _getStructVersion(&V)
-		tag := DataTag{TYPE_OBJECT, DataSizeTag(length), stVersion != 0}
+		fields := V.NumField()
+		curr_ver := _getStructVersion(&V)
+		tag := DataTag{TYPE_OBJECT, DataSizeTag(fields), curr_ver != 0}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
-		if err = w.WriteUintData(tag.SizeTag, uint64(length)); err != nil {
-			return
-		}
 		if tag.VersionTag {
-			if err = w.WriteUintData(TAG_1, uint64(stVersion)); err != nil {
+			if err = w.WriteUintData(TAG_1, uint64(curr_ver)); err != nil {
 				return
 			}
 		}
-		for i := 0; i < length; i++ {
-			v := V.Field(i)
-			if err = w.Write(v.Interface()); err != nil {
+		if err = w.WriteUintData(tag.SizeTag, uint64(fields)); err != nil {
+			return
+		}
+		for i := 0; i < fields; i++ {
+			f := V.Field(i)
+			if err = w.Write(f.Interface()); err != nil {
 				return
 			}
 		}

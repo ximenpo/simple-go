@@ -3,6 +3,7 @@ package databuf
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 )
@@ -17,6 +18,10 @@ func min(l uint64, r uint64) uint64 {
 
 type DataReader struct {
 	buf io.Reader
+}
+
+func NewDataReader(buf io.Reader) *DataReader {
+	return &DataReader{buf}
 }
 
 func (r *DataReader) ReadTagData(tag *DataTag) (err error) {
@@ -84,41 +89,55 @@ func (r *DataReader) ReadIntData(size_tag uint, value *int64) (err error) {
 }
 
 func (r *DataReader) Read(value interface{}) (err error) {
-	{
-		T := reflect.TypeOf(value)
-		if T.Kind() != reflect.Ptr {
-			return errors.New("param must be pointer type")
-		}
+	T := reflect.TypeOf(value)
+	if T.Kind() != reflect.Ptr {
+		return errors.New("param must be pointer type")
 	}
 
+	V := reflect.ValueOf(value).Elem()
+	return r._readItem(&V)
+}
+
+func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 	// data tag
 	var tag DataTag
 	if err = r.ReadTagData(&tag); err != nil {
 		return
 	}
 
-	var size uint64
+	var child_sum uint64
+	var struct_ver uint8
 
-	V := reflect.ValueOf(value).Elem()
 	switch V.Kind() {
 	case reflect.Map, reflect.Slice, reflect.Array:
 		if tag.DataType != TYPE_ARRAY {
 			return errors.New("buf should be array type")
 		}
-		if (V.Kind() == reflect.Map) == (tag.VersionTag) {
+		if (V.Kind() == reflect.Map) != (tag.VersionTag) {
 			return errors.New("malformed array size tag")
 		}
 		if !V.CanSet() {
 			return errors.New("param is not setable")
 		}
-		if err = r.ReadUintData(tag.SizeTag, &size); err != nil {
+		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 	case reflect.Struct:
 		if tag.DataType != TYPE_OBJECT {
 			return errors.New("buf should be object type")
 		}
-		if err = r.ReadUintData(tag.SizeTag, &size); err != nil {
+		if tag.VersionTag {
+			var tmpv uint64
+			if err = r.ReadUintData(TAG_1, &tmpv); err != nil {
+				return
+			}
+			struct_ver = uint8(tmpv)
+		}
+		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
+			return
+		}
+	case reflect.String:
+		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 	default:
@@ -130,23 +149,23 @@ func (r *DataReader) Read(value interface{}) (err error) {
 	switch V.Kind() {
 	case reflect.Map:
 		V.Set(reflect.MakeMap(V.Type()))
-		for i := 0; i < int(size); i++ {
+		for i := 0; i < int(child_sum); i++ {
 			mkey := reflect.New(V.Type().Key()).Elem()
 			mValue := reflect.New(V.Type().Elem()).Elem()
-			if err = r.Read(&mkey); err != nil {
+			if err = r._readItem(&mkey); err != nil {
 				return
 			}
-			if err = r.Read(&mValue); err != nil {
+			if err = r._readItem(&mValue); err != nil {
 				return
 			}
 			V.SetMapIndex(mkey, mValue)
 		}
 
 	case reflect.Slice:
-		S := reflect.MakeSlice(V.Type(), 0, int(min(size, 100)))
-		for i := 0; i < int(size); i++ {
+		S := reflect.MakeSlice(V.Type(), 0, int(min(child_sum, 100)))
+		for i := 0; i < int(child_sum); i++ {
 			item := reflect.New(S.Type().Elem()).Elem()
-			if err = r.Read(&item); err != nil {
+			if err = r._readItem(&item); err != nil {
 				return
 			}
 			S = reflect.Append(S, item)
@@ -155,39 +174,36 @@ func (r *DataReader) Read(value interface{}) (err error) {
 
 	case reflect.Array:
 		capacity := V.Len()
-		if capacity != int(size) {
+		if capacity != int(child_sum) {
 			return errors.New("arrays' size should be equal")
 		}
-		for i := 0; i < int(size); i++ {
+		for i := 0; i < int(child_sum); i++ {
 			item := V.Index(i)
-			r.Read(&item)
+			r._readItem(&item)
 		}
 
 	case reflect.Struct:
-		var ver, curr_ver uint8
+		var curr_ver uint8
+		real_childs := uint64(V.NumField())
 		if tag.VersionTag {
-			var tmpv uint64
-			if err = r.ReadUintData(TAG_1, &tmpv); err != nil {
-				return
+			curr_ver = _getStructVersion(V)
+			if (struct_ver >= curr_ver && child_sum < real_childs) || (struct_ver <= curr_ver && child_sum > real_childs) {
+				return errors.New(fmt.Sprint(
+					"mismatched version tag ",
+					struct_ver, "/", child_sum,
+					curr_ver, "/", real_childs))
 			}
-			ver = uint8(tmpv)
-			curr_ver = _getStructVersion(&V)
-		}
-		realSize := uint64(V.NumField())
-		if (tag.VersionTag && ver >= curr_ver && size < realSize) ||
-			(tag.VersionTag && ver <= curr_ver && size > realSize) {
-			return errors.New("mismatched version tag")
 		}
 		// read existed fields
-		for i := 0; i < int(realSize); i++ {
+		for i := 0; i < int(real_childs); i++ {
 			item := V.Field(i)
-			if err = r.Read(&item); err != nil {
+			if err = r._readItem(&item); err != nil {
 				return
 			}
 		}
 		// ignore unsupport fields
 		if tag.VersionTag {
-			for i := 0; i < int(size-realSize); i++ {
+			for i := 0; i < int(child_sum-real_childs); i++ {
 				if err = r.ReadAndIgnore(); err != nil {
 					return
 				}
@@ -241,8 +257,8 @@ func (r *DataReader) Read(value interface{}) (err error) {
 		V.SetBool(tag.SizeTag == TAG_1)
 
 	case reflect.String:
-		if size > 0 {
-			tmps := make([]byte, size)
+		if child_sum > 0 {
+			tmps := make([]byte, child_sum)
 			if err = binary.Read(r.buf, binary.BigEndian, tmps); err != nil {
 				return
 			}
@@ -252,7 +268,7 @@ func (r *DataReader) Read(value interface{}) (err error) {
 		}
 
 	default:
-		err = errors.New("unsupported read type " + reflect.TypeOf(value).String())
+		err = errors.New("unsupported read type " + V.Type().String())
 	}
 	return
 }
@@ -286,20 +302,20 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 		}
 
 	case TYPE_ARRAY:
-		// array & object -> read size, ver, and contents.
-		var size uint64
-		if err = r.ReadUintData(tag.SizeTag, &size); err != nil {
+		// array & object -> read child_sum, ver, and contents.
+		var child_sum uint64
+		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 
 		if tag.VersionTag {
-			for i := 0; i < int(size); i++ {
+			for i := 0; i < int(child_sum); i++ {
 				if err = r.ReadAndIgnore(); err != nil {
 					return
 				}
 			}
 		} else {
-			for i := 0; i < int(size); i++ {
+			for i := 0; i < int(child_sum); i++ {
 				if err = r.ReadAndIgnore(); err != nil {
 					return
 				}
@@ -310,8 +326,8 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 		}
 
 	case TYPE_OBJECT:
-		var size uint64
-		if err = r.ReadUintData(tag.SizeTag, &size); err != nil {
+		var child_sum uint64
+		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 
@@ -322,7 +338,7 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 			}
 		}
 
-		for i := 0; i < int(size); i++ {
+		for i := 0; i < int(child_sum); i++ {
 			if err = r.ReadAndIgnore(); err != nil {
 				return
 			}

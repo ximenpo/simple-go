@@ -45,7 +45,7 @@ func (b *Buffer) Size() uint {
 	return b.size
 }
 
-func (b *Buffer) Capcity() uint {
+func (b *Buffer) Capacity() uint {
 	return b.capcity
 }
 
