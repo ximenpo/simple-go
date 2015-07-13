@@ -17,7 +17,7 @@ func min(l uint64, r uint64) uint64 {
 }
 
 type DataReader struct {
-	buf io.Reader
+	Buf io.Reader
 }
 
 func NewDataReader(buf io.Reader) *DataReader {
@@ -26,7 +26,7 @@ func NewDataReader(buf io.Reader) *DataReader {
 
 func (r *DataReader) ReadTagData(tag *DataTag) (err error) {
 	var data uint8
-	if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+	if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 		tag.UnPack(data)
 	}
 	return
@@ -38,22 +38,22 @@ func (r *DataReader) ReadUintData(size_tag uint, value *uint64) (err error) {
 		*value = 0
 	case TAG_1:
 		var data uint8
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	case TAG_2:
 		var data uint16
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	case TAG_4:
 		var data uint32
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	default:
 		var data uint64
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	}
@@ -66,22 +66,22 @@ func (r *DataReader) ReadIntData(size_tag uint, value *int64) (err error) {
 		*value = 0
 	case TAG_1:
 		var data int8
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	case TAG_2:
 		var data int16
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	case TAG_4:
 		var data int32
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	default:
 		var data int64
-		if err = binary.Read(r.buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	}
@@ -235,7 +235,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 			return errors.New("buf was not float32 type")
 		}
 		var tmpv float32
-		if err = binary.Read(r.buf, binary.BigEndian, &tmpv); err != nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &tmpv); err != nil {
 			return
 		}
 		V.SetFloat(float64(tmpv))
@@ -245,7 +245,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 			return errors.New("buf was not float64 type")
 		}
 		var tmpv float64
-		if err = binary.Read(r.buf, binary.BigEndian, &tmpv); err != nil {
+		if err = binary.Read(r.Buf, binary.BigEndian, &tmpv); err != nil {
 			return
 		}
 		V.SetFloat(float64(tmpv))
@@ -259,7 +259,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 	case reflect.String:
 		if child_sum > 0 {
 			tmps := make([]byte, child_sum)
-			if err = binary.Read(r.buf, binary.BigEndian, tmps); err != nil {
+			if err = binary.Read(r.Buf, binary.BigEndian, tmps); err != nil {
 				return
 			}
 			V.SetString(string(tmps))
@@ -333,7 +333,7 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 
 		if tag.VersionTag {
 			var tmpv uint8
-			if err = binary.Read(r.buf, binary.BigEndian, &tmpv); err != nil {
+			if err = binary.Read(r.Buf, binary.BigEndian, &tmpv); err != nil {
 				return
 			}
 		}
@@ -348,5 +348,5 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 		return errors.New("unknown data type")
 	}
 
-	return binary.Read(r.buf, binary.BigEndian, make([]byte, todo_bypes, todo_bypes))
+	return binary.Read(r.Buf, binary.BigEndian, make([]byte, todo_bypes, todo_bypes))
 }

@@ -11,11 +11,19 @@ var (
 )
 
 type Buffer struct {
-	failure bool
 	data    []byte
 	capcity uint
 	size    uint
 	offset  uint
+	failure bool
+}
+
+func NewBuffer(data []byte) (buf *Buffer) {
+	buf = &Buffer{}
+	if data != nil {
+		buf.Assign(data)
+	}
+	return
 }
 
 func (b *Buffer) Assign(data []byte) {

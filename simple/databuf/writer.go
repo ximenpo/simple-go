@@ -25,7 +25,7 @@ func _getStructVersion(V *reflect.Value) uint8 {
 }
 
 type DataWriter struct {
-	buf io.Writer
+	Buf io.Writer
 }
 
 func NewDataWriter(buf io.Writer) *DataWriter {
@@ -33,7 +33,7 @@ func NewDataWriter(buf io.Writer) *DataWriter {
 }
 
 func (w *DataWriter) WriteTagData(tag DataTag) (err error) {
-	return binary.Write(w.buf, binary.BigEndian, tag.Pack())
+	return binary.Write(w.Buf, binary.BigEndian, tag.Pack())
 }
 
 func (w *DataWriter) WriteUintData(size_tag uint, value uint64) (err error) {
@@ -41,13 +41,13 @@ func (w *DataWriter) WriteUintData(size_tag uint, value uint64) (err error) {
 	case TAG_0:
 		return nil
 	case TAG_1:
-		return binary.Write(w.buf, binary.BigEndian, uint8(value))
+		return binary.Write(w.Buf, binary.BigEndian, uint8(value))
 	case TAG_2:
-		return binary.Write(w.buf, binary.BigEndian, uint16(value))
+		return binary.Write(w.Buf, binary.BigEndian, uint16(value))
 	case TAG_4:
-		return binary.Write(w.buf, binary.BigEndian, uint32(value))
+		return binary.Write(w.Buf, binary.BigEndian, uint32(value))
 	default:
-		return binary.Write(w.buf, binary.BigEndian, uint64(value))
+		return binary.Write(w.Buf, binary.BigEndian, uint64(value))
 	}
 }
 
@@ -56,13 +56,13 @@ func (w *DataWriter) WriteIntData(size_tag uint, value int64) (err error) {
 	case TAG_0:
 		return nil
 	case TAG_1:
-		return binary.Write(w.buf, binary.BigEndian, int8(value))
+		return binary.Write(w.Buf, binary.BigEndian, int8(value))
 	case TAG_2:
-		return binary.Write(w.buf, binary.BigEndian, int16(value))
+		return binary.Write(w.Buf, binary.BigEndian, int16(value))
 	case TAG_4:
-		return binary.Write(w.buf, binary.BigEndian, int32(value))
+		return binary.Write(w.Buf, binary.BigEndian, int32(value))
 	default:
-		return binary.Write(w.buf, binary.BigEndian, int64(value))
+		return binary.Write(w.Buf, binary.BigEndian, int64(value))
 	}
 }
 
@@ -155,7 +155,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
-		return binary.Write(w.buf, binary.BigEndian, value)
+		return binary.Write(w.Buf, binary.BigEndian, value)
 
 	case reflect.Bool:
 		if V.Bool() {
@@ -176,7 +176,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		if err = w.WriteUintData(tag.SizeTag, uint64(len(cBuff))); err != nil {
 			return
 		}
-		if _, err = w.buf.Write([]byte(cBuff)); err != nil {
+		if _, err = w.Buf.Write([]byte(cBuff)); err != nil {
 			return
 		}
 
