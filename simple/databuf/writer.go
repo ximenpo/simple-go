@@ -77,7 +77,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 	case reflect.Map:
 		keys := V.MapKeys()
 		length := len(keys)
-		tag := DataTag{TYPE_ARRAY, SizeTag(length), false}
+		tag := DataTag{TYPE_ARRAY, DataSizeTag(length), false}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
@@ -96,7 +96,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 
 	case reflect.Slice, reflect.Array:
 		length := V.Len()
-		tag := DataTag{TYPE_ARRAY, SizeTag(length), false}
+		tag := DataTag{TYPE_ARRAY, DataSizeTag(length), false}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
@@ -113,7 +113,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 	case reflect.Struct:
 		length := V.NumField()
 		stVersion := _getStructVersion(&V)
-		tag := DataTag{TYPE_OBJECT, SizeTag(length), stVersion != 0}
+		tag := DataTag{TYPE_OBJECT, DataSizeTag(length), stVersion != 0}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
@@ -133,14 +133,14 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		}
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		tag := DataTag{TYPE_INT, SizeTag(value), false}
+		tag := DataTag{TYPE_INT, DataSizeTag(value), false}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
 		return w.WriteIntData(tag.SizeTag, V.Int())
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		tag := DataTag{TYPE_UINT, SizeTag(value), false}
+		tag := DataTag{TYPE_UINT, DataSizeTag(value), false}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}
@@ -169,7 +169,7 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 
 	case reflect.String:
 		cBuff := []byte(V.String())
-		tag = DataTag{TYPE_STRING, SizeTag(len(cBuff)), false}
+		tag = DataTag{TYPE_STRING, DataSizeTag(len(cBuff)), false}
 		if err = w.WriteTagData(tag); err != nil {
 			return
 		}

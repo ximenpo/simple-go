@@ -29,7 +29,27 @@ const (
 	TAG_SUM
 )
 
-func SizeTag(value interface{}) (ret uint) {
+type DataTag struct {
+	DataType   uint
+	SizeTag    uint
+	VersionTag bool
+}
+
+func (t *DataTag) Pack() (ret uint8) {
+	ret = uint8((t.SizeTag << 4) | (t.DataType << 0))
+	if t.VersionTag {
+		ret |= 0x80
+	}
+	return
+}
+
+func (t *DataTag) UnPack(value uint8) {
+	t.DataType = uint(value & 0x0F)
+	t.SizeTag = uint((value & 0x70) >> 4)
+	t.VersionTag = (value & 0x80) != 0
+}
+
+func DataSizeTag(value interface{}) (ret uint) {
 	ret = TAG_0
 	switch v := value.(type) {
 	case bool:
@@ -72,24 +92,4 @@ func SizeTag(value interface{}) (ret uint) {
 		return TAG_8
 	}
 	return TAG_0
-}
-
-type DataTag struct {
-	DataType   uint
-	SizeTag    uint
-	VersionTag bool
-}
-
-func (t *DataTag) Pack() (ret uint8) {
-	ret = uint8((t.SizeTag << 4) | (t.DataType << 0))
-	if t.VersionTag {
-		ret |= 0x80
-	}
-	return
-}
-
-func (t *DataTag) UnPack(value uint8) {
-	t.DataType = uint(value & 0x0F)
-	t.SizeTag = uint((value & 0x70) >> 4)
-	t.VersionTag = (value & 0x80) != 0
 }
