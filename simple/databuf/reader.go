@@ -24,84 +24,84 @@ func NewDataReader(buf io.Reader) *DataReader {
 	return &DataReader{buf}
 }
 
-func (r *DataReader) ReadTagData(tag *DataTag) (err error) {
+func (self *DataReader) ReadTagData(tag *DataTag) (err error) {
 	var data uint8
-	if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+	if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 		tag.UnPack(data)
 	}
 	return
 }
 
-func (r *DataReader) ReadUintData(size_tag uint, value *uint64) (err error) {
+func (self *DataReader) ReadUintData(size_tag uint, value *uint64) (err error) {
 	switch size_tag {
 	case TAG_0:
 		*value = 0
 	case TAG_1:
 		var data uint8
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	case TAG_2:
 		var data uint16
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	case TAG_4:
 		var data uint32
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	default:
 		var data uint64
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = uint64(data)
 		}
 	}
 	return
 }
 
-func (r *DataReader) ReadIntData(size_tag uint, value *int64) (err error) {
+func (self *DataReader) ReadIntData(size_tag uint, value *int64) (err error) {
 	switch size_tag {
 	case TAG_0:
 		*value = 0
 	case TAG_1:
 		var data int8
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	case TAG_2:
 		var data int16
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	case TAG_4:
 		var data int32
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	default:
 		var data int64
-		if err = binary.Read(r.Buf, binary.BigEndian, &data); err == nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &data); err == nil {
 			*value = int64(data)
 		}
 	}
 	return
 }
 
-func (r *DataReader) Read(value interface{}) (err error) {
+func (self *DataReader) Read(value interface{}) (err error) {
 	T := reflect.TypeOf(value)
 	if T.Kind() != reflect.Ptr {
 		return errors.New("param must be pointer type")
 	}
 
 	V := reflect.ValueOf(value).Elem()
-	return r._readItem(&V)
+	return self._readItem(&V)
 }
 
-func (r *DataReader) _readItem(V *reflect.Value) (err error) {
+func (self *DataReader) _readItem(V *reflect.Value) (err error) {
 	// data tag
 	var tag DataTag
-	if err = r.ReadTagData(&tag); err != nil {
+	if err = self.ReadTagData(&tag); err != nil {
 		return
 	}
 
@@ -119,7 +119,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 		if !V.CanSet() {
 			return errors.New("param is not setable")
 		}
-		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 	case reflect.Struct:
@@ -128,16 +128,16 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 		}
 		if tag.VersionTag {
 			var tmpv uint64
-			if err = r.ReadUintData(TAG_1, &tmpv); err != nil {
+			if err = self.ReadUintData(TAG_1, &tmpv); err != nil {
 				return
 			}
 			struct_ver = uint8(tmpv)
 		}
-		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 	case reflect.String:
-		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 	default:
@@ -152,10 +152,10 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 		for i := 0; i < int(child_sum); i++ {
 			mkey := reflect.New(V.Type().Key()).Elem()
 			mValue := reflect.New(V.Type().Elem()).Elem()
-			if err = r._readItem(&mkey); err != nil {
+			if err = self._readItem(&mkey); err != nil {
 				return
 			}
-			if err = r._readItem(&mValue); err != nil {
+			if err = self._readItem(&mValue); err != nil {
 				return
 			}
 			V.SetMapIndex(mkey, mValue)
@@ -165,7 +165,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 		S := reflect.MakeSlice(V.Type(), 0, int(min(child_sum, 100)))
 		for i := 0; i < int(child_sum); i++ {
 			item := reflect.New(S.Type().Elem()).Elem()
-			if err = r._readItem(&item); err != nil {
+			if err = self._readItem(&item); err != nil {
 				return
 			}
 			S = reflect.Append(S, item)
@@ -179,7 +179,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 		}
 		for i := 0; i < int(child_sum); i++ {
 			item := V.Index(i)
-			r._readItem(&item)
+			self._readItem(&item)
 		}
 
 	case reflect.Struct:
@@ -197,14 +197,14 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 		// read existed fields
 		for i := 0; i < int(real_childs); i++ {
 			item := V.Field(i)
-			if err = r._readItem(&item); err != nil {
+			if err = self._readItem(&item); err != nil {
 				return
 			}
 		}
 		// ignore unsupport fields
 		if tag.VersionTag {
 			for i := 0; i < int(child_sum-real_childs); i++ {
-				if err = r.ReadAndIgnore(); err != nil {
+				if err = self.ReadAndIgnore(); err != nil {
 					return
 				}
 			}
@@ -215,7 +215,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 			return errors.New("buf was not int type")
 		}
 		var tmpv int64
-		if err = r.ReadIntData(tag.SizeTag, &tmpv); err != nil {
+		if err = self.ReadIntData(tag.SizeTag, &tmpv); err != nil {
 			return
 		}
 		V.SetInt(tmpv)
@@ -225,7 +225,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 			return errors.New("buf was not uint type")
 		}
 		var tmpv uint64
-		if err = r.ReadUintData(tag.SizeTag, &tmpv); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &tmpv); err != nil {
 			return
 		}
 		V.SetUint(tmpv)
@@ -235,7 +235,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 			return errors.New("buf was not float32 type")
 		}
 		var tmpv float32
-		if err = binary.Read(r.Buf, binary.BigEndian, &tmpv); err != nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &tmpv); err != nil {
 			return
 		}
 		V.SetFloat(float64(tmpv))
@@ -245,7 +245,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 			return errors.New("buf was not float64 type")
 		}
 		var tmpv float64
-		if err = binary.Read(r.Buf, binary.BigEndian, &tmpv); err != nil {
+		if err = binary.Read(self.Buf, binary.BigEndian, &tmpv); err != nil {
 			return
 		}
 		V.SetFloat(float64(tmpv))
@@ -259,7 +259,7 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 	case reflect.String:
 		if child_sum > 0 {
 			tmps := make([]byte, child_sum)
-			if err = binary.Read(r.Buf, binary.BigEndian, tmps); err != nil {
+			if err = binary.Read(self.Buf, binary.BigEndian, tmps); err != nil {
 				return
 			}
 			V.SetString(string(tmps))
@@ -273,9 +273,9 @@ func (r *DataReader) _readItem(V *reflect.Value) (err error) {
 	return
 }
 
-func (r *DataReader) ReadAndIgnore() (err error) {
+func (self *DataReader) ReadAndIgnore() (err error) {
 	var tag DataTag
-	if err = r.ReadTagData(&tag); err != nil {
+	if err = self.ReadTagData(&tag); err != nil {
 		return
 	}
 
@@ -284,7 +284,7 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 	case TYPE_NONE, TYPE_BOOL:
 	case TYPE_RAW, TYPE_STRING:
 		// string & raw read len, and read data.
-		if err = r.ReadUintData(tag.SizeTag, &todo_bypes); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &todo_bypes); err != nil {
 			return
 		}
 		break
@@ -304,22 +304,22 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 	case TYPE_ARRAY:
 		// array & object -> read child_sum, ver, and contents.
 		var child_sum uint64
-		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 
 		if tag.VersionTag {
 			for i := 0; i < int(child_sum); i++ {
-				if err = r.ReadAndIgnore(); err != nil {
+				if err = self.ReadAndIgnore(); err != nil {
 					return
 				}
 			}
 		} else {
 			for i := 0; i < int(child_sum); i++ {
-				if err = r.ReadAndIgnore(); err != nil {
+				if err = self.ReadAndIgnore(); err != nil {
 					return
 				}
-				if err = r.ReadAndIgnore(); err != nil {
+				if err = self.ReadAndIgnore(); err != nil {
 					return
 				}
 			}
@@ -327,19 +327,19 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 
 	case TYPE_OBJECT:
 		var child_sum uint64
-		if err = r.ReadUintData(tag.SizeTag, &child_sum); err != nil {
+		if err = self.ReadUintData(tag.SizeTag, &child_sum); err != nil {
 			return
 		}
 
 		if tag.VersionTag {
 			var tmpv uint8
-			if err = binary.Read(r.Buf, binary.BigEndian, &tmpv); err != nil {
+			if err = binary.Read(self.Buf, binary.BigEndian, &tmpv); err != nil {
 				return
 			}
 		}
 
 		for i := 0; i < int(child_sum); i++ {
-			if err = r.ReadAndIgnore(); err != nil {
+			if err = self.ReadAndIgnore(); err != nil {
 				return
 			}
 		}
@@ -348,5 +348,5 @@ func (r *DataReader) ReadAndIgnore() (err error) {
 		return errors.New("unknown data type")
 	}
 
-	return binary.Read(r.Buf, binary.BigEndian, make([]byte, todo_bypes, todo_bypes))
+	return binary.Read(self.Buf, binary.BigEndian, make([]byte, todo_bypes, todo_bypes))
 }

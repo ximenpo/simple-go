@@ -15,17 +15,17 @@ func NewRedisPublisher() *RedisPublisher {
 	return &RedisPublisher{}
 }
 
-func (r *RedisPublisher) Close() {
-	r.Conn.Close()
+func (self *RedisPublisher) Close() {
+	self.Conn.Close()
 }
 
-func (r *RedisPublisher) Connect(addr string) (err error) {
-	r.Conn, err = redis.Dial("tcp", addr)
+func (self *RedisPublisher) Connect(addr string) (err error) {
+	self.Conn, err = redis.Dial("tcp", addr)
 	return
 }
 
-func (r *RedisPublisher) Publish(channel string, value interface{}) (err error) {
-	_, err = r.Conn.Do("PUBLISH", channel, value)
+func (self *RedisPublisher) Publish(channel string, value interface{}) (err error) {
+	_, err = self.Conn.Do("PUBLISH", channel, value)
 	return
 }
 
@@ -40,11 +40,11 @@ func NewRedisSubscriber() *RedisSubscriber {
 	return &RedisSubscriber{}
 }
 
-func (r *RedisSubscriber) Close() {
-	r.PubSubConn.Close()
+func (self *RedisSubscriber) Close() {
+	self.PubSubConn.Close()
 }
 
-func (r *RedisSubscriber) Connect(addr string) (err error) {
-	r.PubSubConn.Conn, err = redis.Dial("tcp", addr)
+func (self *RedisSubscriber) Connect(addr string) (err error) {
+	self.PubSubConn.Conn, err = redis.Dial("tcp", addr)
 	return
 }

@@ -32,44 +32,44 @@ func NewDataWriter(buf io.Writer) *DataWriter {
 	return &DataWriter{buf}
 }
 
-func (w *DataWriter) WriteTagData(tag DataTag) (err error) {
-	return binary.Write(w.Buf, binary.BigEndian, tag.Pack())
+func (self *DataWriter) WriteTagData(tag DataTag) (err error) {
+	return binary.Write(self.Buf, binary.BigEndian, tag.Pack())
 }
 
-func (w *DataWriter) WriteUintData(size_tag uint, value uint64) (err error) {
+func (self *DataWriter) WriteUintData(size_tag uint, value uint64) (err error) {
 	switch size_tag {
 	case TAG_0:
 		return nil
 	case TAG_1:
-		return binary.Write(w.Buf, binary.BigEndian, uint8(value))
+		return binary.Write(self.Buf, binary.BigEndian, uint8(value))
 	case TAG_2:
-		return binary.Write(w.Buf, binary.BigEndian, uint16(value))
+		return binary.Write(self.Buf, binary.BigEndian, uint16(value))
 	case TAG_4:
-		return binary.Write(w.Buf, binary.BigEndian, uint32(value))
+		return binary.Write(self.Buf, binary.BigEndian, uint32(value))
 	default:
-		return binary.Write(w.Buf, binary.BigEndian, uint64(value))
+		return binary.Write(self.Buf, binary.BigEndian, uint64(value))
 	}
 }
 
-func (w *DataWriter) WriteIntData(size_tag uint, value int64) (err error) {
+func (self *DataWriter) WriteIntData(size_tag uint, value int64) (err error) {
 	switch size_tag {
 	case TAG_0:
 		return nil
 	case TAG_1:
-		return binary.Write(w.Buf, binary.BigEndian, int8(value))
+		return binary.Write(self.Buf, binary.BigEndian, int8(value))
 	case TAG_2:
-		return binary.Write(w.Buf, binary.BigEndian, int16(value))
+		return binary.Write(self.Buf, binary.BigEndian, int16(value))
 	case TAG_4:
-		return binary.Write(w.Buf, binary.BigEndian, int32(value))
+		return binary.Write(self.Buf, binary.BigEndian, int32(value))
 	default:
-		return binary.Write(w.Buf, binary.BigEndian, int64(value))
+		return binary.Write(self.Buf, binary.BigEndian, int64(value))
 	}
 }
 
-func (w *DataWriter) Write(value interface{}) (err error) {
+func (self *DataWriter) Write(value interface{}) (err error) {
 	V := reflect.ValueOf(value)
 	if V.Kind() == reflect.Ptr {
-		return w.Write(V.Elem().Interface())
+		return self.Write(V.Elem().Interface())
 	}
 
 	var tag DataTag
@@ -78,18 +78,18 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		keys := V.MapKeys()
 		length := len(keys)
 		tag := DataTag{TYPE_ARRAY, DataSizeTag(length), true}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
-		if err = w.WriteUintData(tag.SizeTag, uint64(length)); err != nil {
+		if err = self.WriteUintData(tag.SizeTag, uint64(length)); err != nil {
 			return
 		}
 		for i := 0; i < length; i++ {
 			v := V.MapIndex(keys[i])
-			if err = w.Write(keys[i].Interface()); err != nil {
+			if err = self.Write(keys[i].Interface()); err != nil {
 				return
 			}
-			if err = w.Write(v.Interface()); err != nil {
+			if err = self.Write(v.Interface()); err != nil {
 				return
 			}
 		}
@@ -97,15 +97,15 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 	case reflect.Slice, reflect.Array:
 		length := V.Len()
 		tag := DataTag{TYPE_ARRAY, DataSizeTag(length), false}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
-		if err = w.WriteUintData(tag.SizeTag, uint64(length)); err != nil {
+		if err = self.WriteUintData(tag.SizeTag, uint64(length)); err != nil {
 			return
 		}
 		for i := 0; i < length; i++ {
 			v := V.Index(i)
-			if err = w.Write(v.Interface()); err != nil {
+			if err = self.Write(v.Interface()); err != nil {
 				return
 			}
 		}
@@ -114,37 +114,37 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		fields := V.NumField()
 		curr_ver := _getStructVersion(&V)
 		tag := DataTag{TYPE_OBJECT, DataSizeTag(fields), curr_ver != 0}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
 		if tag.VersionTag {
-			if err = w.WriteUintData(TAG_1, uint64(curr_ver)); err != nil {
+			if err = self.WriteUintData(TAG_1, uint64(curr_ver)); err != nil {
 				return
 			}
 		}
-		if err = w.WriteUintData(tag.SizeTag, uint64(fields)); err != nil {
+		if err = self.WriteUintData(tag.SizeTag, uint64(fields)); err != nil {
 			return
 		}
 		for i := 0; i < fields; i++ {
 			f := V.Field(i)
-			if err = w.Write(f.Interface()); err != nil {
+			if err = self.Write(f.Interface()); err != nil {
 				return
 			}
 		}
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		tag := DataTag{TYPE_INT, DataSizeTag(value), false}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
-		return w.WriteIntData(tag.SizeTag, V.Int())
+		return self.WriteIntData(tag.SizeTag, V.Int())
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		tag := DataTag{TYPE_UINT, DataSizeTag(value), false}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
-		return w.WriteUintData(tag.SizeTag, V.Uint())
+		return self.WriteUintData(tag.SizeTag, V.Uint())
 
 	case reflect.Float32, reflect.Float64:
 		if V.Kind() == reflect.Float32 {
@@ -152,10 +152,10 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		} else {
 			tag = DataTag{TYPE_REAL, TAG_8, false}
 		}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
-		return binary.Write(w.Buf, binary.BigEndian, value)
+		return binary.Write(self.Buf, binary.BigEndian, value)
 
 	case reflect.Bool:
 		if V.Bool() {
@@ -163,20 +163,20 @@ func (w *DataWriter) Write(value interface{}) (err error) {
 		} else {
 			tag = DataTag{TYPE_BOOL, TAG_0, false}
 		}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
 
 	case reflect.String:
 		cBuff := []byte(V.String())
 		tag = DataTag{TYPE_STRING, DataSizeTag(len(cBuff)), false}
-		if err = w.WriteTagData(tag); err != nil {
+		if err = self.WriteTagData(tag); err != nil {
 			return
 		}
-		if err = w.WriteUintData(tag.SizeTag, uint64(len(cBuff))); err != nil {
+		if err = self.WriteUintData(tag.SizeTag, uint64(len(cBuff))); err != nil {
 			return
 		}
-		if _, err = w.Buf.Write([]byte(cBuff)); err != nil {
+		if _, err = self.Buf.Write([]byte(cBuff)); err != nil {
 			return
 		}
 

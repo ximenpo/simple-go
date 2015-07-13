@@ -26,59 +26,59 @@ func NewBuffer(data []byte) (buf *Buffer) {
 	return
 }
 
-func (b *Buffer) Assign(data []byte) {
-	b.capcity = uint(len(data))
-	b.size = b.capcity
-	b.data = data
-	b.offset = 0
-	b.failure = false
+func (self *Buffer) Assign(data []byte) {
+	self.capcity = uint(len(data))
+	self.size = self.capcity
+	self.data = data
+	self.offset = 0
+	self.failure = false
 }
 
-func (b *Buffer) Clear() {
-	b.failure = false
-	b.size = 0
-	b.offset = 0
+func (self *Buffer) Clear() {
+	self.failure = false
+	self.size = 0
+	self.offset = 0
 }
 
-func (b *Buffer) Rewind() {
-	b.failure = false
-	b.offset = 0
+func (self *Buffer) Rewind() {
+	self.failure = false
+	self.offset = 0
 }
 
-func (b *Buffer) Data() []byte {
-	return b.data[0:b.size]
+func (self *Buffer) Data() []byte {
+	return self.data[0:self.size]
 }
 
-func (b *Buffer) Size() uint {
-	return b.size
+func (self *Buffer) Size() uint {
+	return self.size
 }
 
-func (b *Buffer) Capacity() uint {
-	return b.capcity
+func (self *Buffer) Capacity() uint {
+	return self.capcity
 }
 
-func (b *Buffer) Pos() uint {
-	return b.offset
+func (self *Buffer) Pos() uint {
+	return self.offset
 }
 
-func (b *Buffer) DataFromCurrPos() []byte {
-	return b.data[b.offset:b.size]
+func (self *Buffer) DataFromCurrPos() []byte {
+	return self.data[self.offset:self.size]
 }
 
-func (b *Buffer) Good() bool {
-	return !b.failure
+func (self *Buffer) Good() bool {
+	return !self.failure
 }
 
-func (b *Buffer) Failure() bool {
-	return b.failure
+func (self *Buffer) Failure() bool {
+	return self.failure
 }
 
-func (b *Buffer) SetFailure() {
-	b.failure = true
+func (self *Buffer) SetFailure() {
+	self.failure = true
 }
 
-func (b *Buffer) Write(pData []byte) (n int, err error) {
-	if b.Failure() {
+func (self *Buffer) Write(pData []byte) (n int, err error) {
+	if self.Failure() {
 		return 0, errors.New("buffer was failure")
 	}
 
@@ -86,27 +86,27 @@ func (b *Buffer) Write(pData []byte) (n int, err error) {
 		return 0, nil
 	}
 
-	if b.capcity == 0 {
-		b.data = make([]byte, Buffer_DefaultCapacity)
-		b.capcity = Buffer_DefaultCapacity
+	if self.capcity == 0 {
+		self.data = make([]byte, Buffer_DefaultCapacity)
+		self.capcity = Buffer_DefaultCapacity
 	}
 
 	nLen := uint(len(pData))
-	if b.offset+nLen > b.capcity {
-		b.failure = true
+	if self.offset+nLen > self.capcity {
+		self.failure = true
 		return 0, errors.New("now enough space")
 	}
 
-	copy(b.data[b.offset:], pData[0:nLen])
-	b.offset += nLen
-	if b.offset > b.size {
-		b.size = b.offset
+	copy(self.data[self.offset:], pData[0:nLen])
+	self.offset += nLen
+	if self.offset > self.size {
+		self.size = self.offset
 	}
 	return int(nLen), nil
 }
 
-func (b *Buffer) Read(pData []byte) (n int, err error) {
-	if b.Failure() {
+func (self *Buffer) Read(pData []byte) (n int, err error) {
+	if self.Failure() {
 		return 0, errors.New("buffer was failure")
 	}
 
@@ -115,20 +115,20 @@ func (b *Buffer) Read(pData []byte) (n int, err error) {
 	}
 
 	nLen := uint(len(pData))
-	if b.size-b.offset < nLen {
-		b.failure = true
+	if self.size-self.offset < nLen {
+		self.failure = true
 		return 0, errors.New("now enough data")
 	}
 
-	copy(pData, b.data[b.offset:b.offset+nLen])
-	b.offset += nLen
+	copy(pData, self.data[self.offset:self.offset+nLen])
+	self.offset += nLen
 	return int(nLen), nil
 }
 
-func (b *Buffer) Dump() string {
+func (self *Buffer) Dump() string {
 	line := ""
-	for i := uint(0); i < b.Size(); i++ {
-		line += fmt.Sprintf("%02X", b.data[i])
+	for i := uint(0); i < self.Size(); i++ {
+		line += fmt.Sprintf("%02X", self.data[i])
 		line += " "
 		if i%16 == 15 {
 			line += "\n"

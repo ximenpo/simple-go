@@ -35,18 +35,18 @@ type DataTag struct {
 	VersionTag bool
 }
 
-func (t *DataTag) Pack() (ret uint8) {
-	ret = uint8((t.SizeTag << 4) | (t.DataType << 0))
-	if t.VersionTag {
+func (self DataTag) Pack() (ret uint8) {
+	ret = uint8((self.SizeTag << 4) | (self.DataType << 0))
+	if self.VersionTag {
 		ret |= 0x80
 	}
 	return
 }
 
-func (t *DataTag) UnPack(value uint8) {
-	t.DataType = uint(value & 0x0F)
-	t.SizeTag = uint((value & 0x70) >> 4)
-	t.VersionTag = (value & 0x80) != 0
+func (self *DataTag) UnPack(value uint8) {
+	self.DataType = uint(value & 0x0F)
+	self.SizeTag = uint((value & 0x70) >> 4)
+	self.VersionTag = (value & 0x80) != 0
 }
 
 func DataSizeTag(value interface{}) (ret uint) {
