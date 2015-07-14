@@ -43,26 +43,58 @@ type ConnWriter interface {
 
 // 写队列分发循环
 type ConnWriteDispatcher interface {
-	WriteDispatcherLoop(queue <-chan *ConnEvent) // 分发输出数据包
+	WriteDispatcherLoop(queue <-chan *ConnEvent) error // 分发输出数据包
 }
 
-//	连接处理接口
-type ConnMgrHandler interface {
-	//PushEvent(evt *ConnEvent) // 处理 ConnectionEvent
+// 消息队列
+type ConnEventQueue interface {
+	PushEvent(evt *ConnEvent)
 }
 
 type ConnHandler struct {
 	Reader          ConnReader
 	Writer          ConnWriter
 	WriterDispacher ConnWriteDispatcher
+	EvtQueue		ConnEventQueue
 }
 
-type DefaultConnHandler struct {
+type ConnMgr struct {
 	ConnHandler
 }
 
-//func (self *DefaultConnHandler)
+funct NewConnMgr() *ConnMgr{
+	
+}
 
-func HandleConn(handler *ConnHandler) {
+func (self *ConnMgr) HandleConn(conn *Conn) (err error) {
+	var sigstop chan bool
+	// connected event
+	handler.EvtQueue <- &ConnEvent{CONN_CONNECTED, conn, nil}
+	defer func() {
+		if err = recover(); err != nil {
+			log.Println(conn, " DefaultConnectionProcess error", e)
+			err = errors.New(fmt.Sprint(e))
+		}
+		if sigstop != nil {
+			close(sigstop)
+		}
+		conn.Close()
 
+		// disconnect event.
+		handler.EvtQueue <- &ConnEvent{CONN_DISCONNECTED, conn, nil}
+	}()
+
+	// writer loop
+	{
+		sigstop = make(chan bool, 0)
+		go handler.Writer(conn, sigstop)
+	}
+
+	// reader loop
+	if err = handler.Reader(conn); err != nil {
+		log.Println(err)
+		return
+	}
+
+	return
 }
