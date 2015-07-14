@@ -31,21 +31,50 @@ func (self *ConnFrameWriter) WriteFrame(conn *Conn, frame *Frame) (err error) {
 
 // 读实现
 type ConnReader struct {
-	Config      *ConnConfig
-	Queue       <-chan Event
-	FrameReader FrameReader
+	Config      *ConnConfig   // optional
+	Queue       chan<- *Event // must be set
+	FrameReader FrameReader   // must be set
 }
 
 func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
-	// TODO:
+	if conn == nil {
+		return errors.New("conn must not be nil")
+	}
+	if self.Queue == nil {
+		return errors.New("event queue must not be nil")
+	}
+	if self.FrameReader == nil {
+		return errors.New("frame reader must not be nil")
+	}
+
+	for {
+		var evt = new(Event)
+
+		cfg := self.Config
+		if cfg != nil && cfg.ReadTimeout >= 1 {
+			d := time.Second * time.Duration(cfg.ReadTimeout)
+			conn.NetConn.SetReadDeadline(time.Now().Add(d))
+		}
+
+		if err = self.FrameReader.ReadFrame(conn, &evt.Frame); err != nil {
+			return
+		}
+
+		if cfg != nil {
+			conn.NetConn.SetReadDeadline(time.Time{})
+		}
+
+		evt.Frame.Data.Rewind()
+		self.Queue <- evt
+	}
 	return
 }
 
 // 写实现
 type ConnWriter struct {
-	Config      *ConnConfig  // optional
-	Queue       <-chan Event // must be set
-	FrameWriter FrameWriter  // must be set
+	Config      *ConnConfig   // optional
+	Queue       <-chan *Event // must be set
+	FrameWriter FrameWriter   // must be set
 }
 
 func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
@@ -72,8 +101,10 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 				conn.NetConn.SetWriteDeadline(time.Now().Add(d))
 			}
 
-			if err = self.FrameWriter.WriteFrame(conn, &evt.Data); err != nil {
-				return
+			if evt.MsgType == MESSAGE {
+				if err = self.FrameWriter.WriteFrame(conn, &evt.Frame); err != nil {
+					return
+				}
 			}
 
 			if cfg != nil {

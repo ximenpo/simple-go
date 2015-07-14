@@ -13,5 +13,5 @@ const (
 type Event struct {
 	MsgType int   //  msg type
 	Conn    Conn  //  src/target conn
-	Data    Frame //  msg data
+	Frame   Frame //  msg data
 }
