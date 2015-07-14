@@ -31,17 +31,16 @@ func (self *ConnFrameWriter) WriteFrame(conn *Conn, frame *Frame) (err error) {
 
 // 读实现
 type ConnReader struct {
-	Config      *ConnConfig   // optional
-	Queue       chan<- *Event // must be set
-	FrameReader FrameReader   // must be set
+	Config      *ConnConfig // optional
+	FrameReader FrameReader // must be set
 }
 
 func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 	if conn == nil {
 		return errors.New("conn must not be nil")
 	}
-	if self.Queue == nil {
-		return errors.New("event queue must not be nil")
+	if conn.ReadQueue == nil {
+		return errors.New("conn read queue must not be nil")
 	}
 	if self.FrameReader == nil {
 		return errors.New("frame reader must not be nil")
@@ -65,24 +64,23 @@ func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 		}
 
 		evt.Frame.Data.Rewind()
-		self.Queue <- evt
+		conn.ReadQueue <- evt
 	}
 	return
 }
 
 // 写实现
 type ConnWriter struct {
-	Config      *ConnConfig   // optional
-	Queue       <-chan *Event // must be set
-	FrameWriter FrameWriter   // must be set
+	Config      *ConnConfig // optional
+	FrameWriter FrameWriter // must be set
 }
 
 func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 	if conn == nil {
 		return errors.New("conn must not be nil")
 	}
-	if self.Queue == nil {
-		return errors.New("event queue must not be nil")
+	if conn.WriteQueue == nil {
+		return errors.New("conn write queue must not be nil")
 	}
 	if self.FrameWriter == nil {
 		return errors.New("frame writer must not be nil")
@@ -90,7 +88,7 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 
 	for {
 		select {
-		case evt, ok := <-self.Queue:
+		case evt, ok := <-conn.WriteQueue:
 			if !ok {
 				return errors.New("queue closed")
 			}
@@ -123,7 +121,20 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 type ConnWriteDispatcher struct {
 }
 
-func (self *ConnWriteDispatcher) DispatchLoop() (err error) {
-	// TODO:
+func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event) (err error) {
+	for {
+		select {
+		case evt, ok := <-queue:
+			if !ok {
+				return errors.New("queue closed")
+			}
+
+			if !evt.Conn.Disconnected {
+				evt.Conn.WriteQueue <- evt
+			} else {
+				// drop it
+			}
+		}
+	}
 	return
 }
