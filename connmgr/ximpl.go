@@ -146,7 +146,6 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 type ConnHandler struct {
 	Reader Reader
 	Writer Writer
-	Stop   chan bool
 }
 
 func (self *ConnHandler) HandleConn(conn *Conn, stop <-chan bool) (err error) {
@@ -166,31 +165,22 @@ func (self *ConnHandler) HandleConn(conn *Conn, stop <-chan bool) (err error) {
 		return errors.New("Writer must not be nil")
 	}
 
-	var sigstop = self.Stop
-	if sigstop == nil {
-		sigstop = make(chan bool, 0)
-	}
-
 	// connected event
 	conn.ReadQueue <- &Event{CONNECTED, conn, nil}
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.New(fmt.Sprint(e))
 		}
-		if sigstop != nil {
-			close(sigstop)
-		}
-
 		// disconnect event
 		conn.ReadQueue <- &Event{DISCONNECTED, conn, nil}
 		conn.Close()
 	}()
 
 	// writer loop
-	go self.Writer.WriteLoop(conn, sigstop)
+	go self.Writer.WriteLoop(conn, stop)
 
 	// reader loop
-	if err = self.Reader.ReadLoop(conn, sigstop); err != nil {
+	if err = self.Reader.ReadLoop(conn, stop); err != nil {
 		return
 	}
 
