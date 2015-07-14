@@ -3,6 +3,7 @@ package connmgr
 import (
 	"errors"
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -10,6 +11,34 @@ import (
 type ConnConfig struct {
 	ReadTimeout  uint // seconds
 	WriteTimeout uint // seconds
+
+	WriteQueueSize uint // output queue size
+}
+
+// Conn工厂
+type ConnFactory struct {
+	Config    *ConnConfig // optional
+	ReadQueue chan *Event // 读入队列，待处理，由外部设置
+}
+
+func (self *ConnFactory) NewConn(net_conn net.Conn) (ret *Conn, err error) {
+	if self.ReadQueue == nil {
+		return nil, errors.New("read queue must not be nil")
+	}
+
+	cfg := self.Config
+	queue_size := uint(16)
+	if cfg != nil {
+		queue_size = cfg.WriteQueueSize
+	}
+
+	return &Conn{
+		NetConn:      net_conn,
+		Disconnected: false,
+		ReadQueue:    self.ReadQueue,
+		WriteQueue:   make(chan *Event, queue_size),
+		Tag:          0,
+	}, nil
 }
 
 // 读实现
@@ -21,6 +50,9 @@ type ConnReader struct {
 func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 	if conn == nil {
 		return errors.New("conn must not be nil")
+	}
+	if stop == nil {
+		return errors.New("stop chan must not be nil")
 	}
 	if conn.ReadQueue == nil {
 		return errors.New("conn read queue must not be nil")
@@ -69,6 +101,9 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 	if conn == nil {
 		return errors.New("conn must not be nil")
 	}
+	if stop == nil {
+		return errors.New("stop chan must not be nil")
+	}
 	if conn.WriteQueue == nil {
 		return errors.New("conn write queue must not be nil")
 	}
@@ -114,12 +149,15 @@ type ConnHandler struct {
 	Stop   chan bool
 }
 
-func (self *ConnHandler) HandleConn(conn *Conn) (err error) {
+func (self *ConnHandler) HandleConn(conn *Conn, stop <-chan bool) (err error) {
 	if conn == nil {
 		return errors.New("conn must not be nil")
 	}
 	if conn.ReadQueue == nil {
 		return errors.New("conn read queue must not be nil")
+	}
+	if stop == nil {
+		return errors.New("stop chan must not be nil")
 	}
 	if self.Reader == nil {
 		return errors.New("Reader must not be nil")
@@ -144,7 +182,7 @@ func (self *ConnHandler) HandleConn(conn *Conn) (err error) {
 		}
 
 		// disconnect event
-		conn.ReadQueue <- &Event{CONNECTED, conn, nil}
+		conn.ReadQueue <- &Event{DISCONNECTED, conn, nil}
 		conn.Close()
 	}()
 
@@ -163,7 +201,14 @@ func (self *ConnHandler) HandleConn(conn *Conn) (err error) {
 type ConnWriteDispatcher struct {
 }
 
-func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event) (err error) {
+func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event, stop <-chan bool) (err error) {
+	if queue == nil {
+		return errors.New("write dispatch queue must not be nil")
+	}
+	if stop == nil {
+		return errors.New("stop chan must not be nil")
+	}
+
 	for {
 		select {
 		case evt, ok := <-queue:
@@ -179,4 +224,43 @@ func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event) (err error) {
 		}
 	}
 	return
+}
+
+// 接收循环
+type ConnAcceptor struct {
+	Handler Handler
+	Factory Factory
+
+	SyncHandler bool // false: accept & async process
+}
+
+func (self *ConnAcceptor) AcceptLoop(listener *net.TCPListener, stop <-chan bool) (err error) {
+	if listener == nil {
+		return errors.New("listener must not be nil")
+	}
+	if stop == nil {
+		return errors.New("stop chan must not be nil")
+	}
+	if self.Handler == nil {
+		return errors.New("Handler must not be nil")
+	}
+	if self.Factory == nil {
+		return errors.New("Factory must not be nil")
+	}
+
+	var net_conn net.Conn
+	for {
+		net_conn, err = listener.Accept()
+		if err != nil {
+			return
+		}
+
+		if conn, _ := self.Factory.NewConn(net_conn); conn != nil {
+			if self.SyncHandler {
+				self.Handler.HandleConn(conn, stop)
+			} else {
+				go self.Handler.HandleConn(conn, stop)
+			}
+		}
+	}
 }

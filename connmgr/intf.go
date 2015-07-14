@@ -17,6 +17,11 @@ import (
 //	-	连接写GO程将数据包发送到客户端
 //
 
+// Conn工厂
+type Factory interface {
+	NewConn(conn net.Conn) (ret *Conn, err error) // 生成Conn对象
+}
+
 // 读处理循环，可被调用于GO程
 type Reader interface {
 	ReadLoop(conn *Conn, stop <-chan bool) error // 处理连接读循环
@@ -29,15 +34,15 @@ type Writer interface {
 
 // 连接处理入口
 type Handler interface {
-	HandleConn(conn *Conn) error // 处理新连接
+	HandleConn(conn *Conn, stop <-chan bool) error // 处理新连接
 }
 
 // 写队列分发循环，可被调用于GO程
 type Dispatcher interface {
-	DispatchLoop(queue <-chan *Event) error // 分发输出数据包
+	DispatchLoop(queue <-chan *Event, stop <-chan bool) error // 分发输出数据包
 }
 
 // 接收循环
 type Acceptor interface {
-	AcceptLoop(listener *net.TCPListener) error // 处理Accept循环
+	AcceptLoop(listener *net.TCPListener, stop <-chan bool) error // 处理Accept循环
 }
