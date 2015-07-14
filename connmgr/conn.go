@@ -15,9 +15,3 @@ func (self *Conn) Close() {
 	self.Disconnected = true
 	self.NetConn.Close()
 }
-
-// 连接配置信息
-type ConnConfig struct {
-	ReadTimeout  uint // seconds
-	WriteTimeout uint // seconds
-}
