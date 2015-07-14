@@ -2,6 +2,7 @@ package connmgr
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -101,6 +102,58 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 		case _, _ = <-stop:
 			return
 		}
+	}
+
+	return
+}
+
+// 连接处理入口
+type ConnHandler struct {
+	Reader Reader
+	Writer Writer
+	Stop   chan bool
+}
+
+func (self *ConnHandler) HandleConn(conn *Conn) (err error) {
+	if conn == nil {
+		return errors.New("conn must not be nil")
+	}
+	if conn.ReadQueue == nil {
+		return errors.New("conn read queue must not be nil")
+	}
+	if self.Reader == nil {
+		return errors.New("Reader must not be nil")
+	}
+	if self.Writer == nil {
+		return errors.New("Writer must not be nil")
+	}
+
+	var sigstop = self.Stop
+	if sigstop == nil {
+		sigstop = make(chan bool, 0)
+	}
+
+	// connected event
+	conn.ReadQueue <- &Event{CONNECTED, conn, nil}
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(fmt.Sprint(e))
+		}
+		if sigstop != nil {
+			close(sigstop)
+		}
+
+		// disconnect event
+		conn.ReadQueue <- &Event{CONNECTED, conn, nil}
+		conn.Close()
+	}()
+
+	// writer loop
+	go self.Writer.WriteLoop(conn, sigstop)
+
+	// reader loop
+	if err = self.Reader.ReadLoop(conn, sigstop); err != nil {
+		return
 	}
 
 	return
