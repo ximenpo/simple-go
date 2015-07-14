@@ -1,5 +1,9 @@
 package connmgr
 
+import (
+	"net"
+)
+
 //
 //	连接管理模型
 //	-	每条连接起两个GO程，一个读，一个写
@@ -23,7 +27,17 @@ type Writer interface {
 	WriteLoop(conn *Conn, stop <-chan bool) error // 处理连接写循环
 }
 
+// 连接处理入口
+type Handler interface {
+	HandleConn(conn *Conn) error // 处理新连接
+}
+
 // 写队列分发循环，可被调用于GO程
 type Dispatcher interface {
 	DispatchLoop(queue <-chan *Event) error // 分发输出数据包
+}
+
+// 接收循环
+type Acceptor interface {
+	AcceptLoop(listener *net.TCPListener) error // 处理Accept循环
 }
