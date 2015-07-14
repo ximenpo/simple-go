@@ -15,12 +15,12 @@ package connmgr
 
 // 读处理循环，可被调用于GO程
 type Reader interface {
-	ReadLoop(conn *Conn) error // 处理连接读循环
+	ReadLoop(conn *Conn, stop <-chan bool) error // 处理连接读循环
 }
 
 // 写处理循环，可被调用于GO程
 type Writer interface {
-	WriteLoop(conn *Conn) error // 处理连接写循环
+	WriteLoop(conn *Conn, stop <-chan bool) error // 处理连接写循环
 }
 
 // 写队列分发循环，可被调用于GO程
