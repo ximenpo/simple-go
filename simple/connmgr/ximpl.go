@@ -284,3 +284,26 @@ func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event, stop <-chan b
 	}
 	return
 }
+
+// simple client
+type ConnClient struct {
+	Config *ConnConfig // optional
+
+	Factory
+	Reader
+	Writer
+	Handler
+}
+
+// simple server
+type ConnServer struct {
+	Config *ConnConfig // optional
+
+	Factory
+	Reader
+	Writer
+	Handler
+
+	Acceptor
+	Dispatcher
+}

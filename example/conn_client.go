@@ -11,17 +11,18 @@ import (
 func main() {
 
 	evt_queue := make(chan *Event, 10)
-	var client = &ConnHandler{
-		Reader: &ConnReader{
-			FrameReader: &SimpleFrameReader{},
+	var client = ConnClient{
+		Factory: &ConnFactory{
+			ReadQueue: evt_queue,
 		},
-		Writer: &ConnWriter{
-			FrameWriter: &SimpleFrameWriter{},
+		Handler: &ConnHandler{
+			Reader: &ConnReader{
+				FrameReader: &SimpleFrameReader{},
+			},
+			Writer: &ConnWriter{
+				FrameWriter: &SimpleFrameWriter{},
+			},
 		},
-	}
-
-	var factory = &ConnFactory{
-		ReadQueue: evt_queue,
 	}
 
 	net_conn, err := net.Dial("tcp", ":8080")
@@ -33,7 +34,7 @@ func main() {
 
 	sig_stop := make(chan bool)
 
-	conn, err := factory.NewConn(net_conn)
+	conn, err := client.Factory.NewConn(net_conn)
 	if err != nil {
 		log.Fatal(err)
 	}
