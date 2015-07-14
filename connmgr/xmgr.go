@@ -11,24 +11,6 @@ type ConnConfig struct {
 	WriteTimeout uint // seconds
 }
 
-// 读取幀数据
-type ConnFrameReader struct {
-}
-
-func (self *ConnFrameReader) ReadFrame(conn *Conn, frame *Frame) (err error) {
-	// TODO:
-	return
-}
-
-// 写入幀数据
-type ConnFrameWriter struct {
-}
-
-func (self *ConnFrameWriter) WriteFrame(conn *Conn, frame *Frame) (err error) {
-	// TODO:
-	return
-}
-
 // 读实现
 type ConnReader struct {
 	Config      *ConnConfig // optional
@@ -55,7 +37,7 @@ func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 			conn.NetConn.SetReadDeadline(time.Now().Add(d))
 		}
 
-		if err = self.FrameReader.ReadFrame(conn, &evt.Frame); err != nil {
+		if evt.Frame, err = self.FrameReader.ReadFrame(conn); err != nil {
 			return
 		}
 
@@ -63,7 +45,14 @@ func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 			conn.NetConn.SetReadDeadline(time.Time{})
 		}
 
-		evt.Frame.Data.Rewind()
+		if evt.Frame == nil {
+			return errors.New("ReadFrame returns nil Frame")
+		}
+
+		if data := evt.Frame.FrameData(); data != nil {
+			data.Rewind()
+		}
+
 		conn.ReadQueue <- evt
 	}
 	return
@@ -100,7 +89,7 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 			}
 
 			if evt.MsgType == MESSAGE {
-				if err = self.FrameWriter.WriteFrame(conn, &evt.Frame); err != nil {
+				if err = self.FrameWriter.WriteFrame(conn, evt.Frame); err != nil {
 					return
 				}
 			}
