@@ -17,7 +17,8 @@ type ConnConfig struct {
 
 // Conn工厂
 type ConnFactory struct {
-	Config    *ConnConfig // optional
+	Config *ConnConfig // optional
+
 	ReadQueue chan *Event // 读入队列，待处理，由外部设置
 }
 
@@ -43,7 +44,8 @@ func (self *ConnFactory) NewConn(net_conn net.Conn) (ret *Conn, err error) {
 
 // 读实现
 type ConnReader struct {
-	Config      *ConnConfig // optional
+	Config *ConnConfig // optional
+
 	FrameReader FrameReader // must be set
 }
 
@@ -62,7 +64,10 @@ func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 	}
 
 	for {
-		var evt = new(Event)
+		var evt = &Event{
+			Type: MESSAGE,
+			Conn: conn,
+		}
 
 		cfg := self.Config
 		if cfg != nil && cfg.ReadTimeout >= 1 {
@@ -93,7 +98,8 @@ func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 
 // 写实现
 type ConnWriter struct {
-	Config      *ConnConfig // optional
+	Config *ConnConfig // optional
+
 	FrameWriter FrameWriter // must be set
 }
 
@@ -124,7 +130,7 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 				conn.NetConn.SetWriteDeadline(time.Now().Add(d))
 			}
 
-			if evt.MsgType == MESSAGE {
+			if evt.Type == MESSAGE {
 				if err = self.FrameWriter.WriteFrame(conn, evt.Frame); err != nil {
 					return
 				}
@@ -134,7 +140,7 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 				conn.NetConn.SetWriteDeadline(time.Time{})
 			}
 
-		case _, _ = <-stop:
+		case <-stop:
 			return
 		}
 	}
@@ -144,6 +150,8 @@ func (self *ConnWriter) WriteLoop(conn *Conn, stop <-chan bool) (err error) {
 
 // 连接处理入口
 type ConnHandler struct {
+	Config *ConnConfig // optional
+
 	Reader Reader
 	Writer Writer
 }
@@ -187,8 +195,67 @@ func (self *ConnHandler) HandleConn(conn *Conn, stop <-chan bool) (err error) {
 	return
 }
 
+// 接收循环
+type ConnAcceptor struct {
+	Config *ConnConfig // optional
+
+	Factory Factory
+	Handler Handler
+
+	SyncHandler bool // false: accept & async process
+}
+
+func (self *ConnAcceptor) AcceptLoop(listener net.Listener, stop <-chan bool) (err error) {
+	if listener == nil {
+		return errors.New("listener must not be nil")
+	}
+	if stop == nil {
+		return errors.New("stop chan must not be nil")
+	}
+	if self.Handler == nil {
+		return errors.New("Handler must not be nil")
+	}
+	if self.Factory == nil {
+		return errors.New("Factory must not be nil")
+	}
+
+	var stopping = false
+	var net_conn net.Conn
+	for {
+		net_conn, err = listener.Accept()
+		if err != nil {
+			return
+		}
+
+		if conn, _ := self.Factory.NewConn(net_conn); conn != nil {
+			if self.SyncHandler {
+				self.Handler.HandleConn(conn, stop)
+			} else {
+				go self.Handler.HandleConn(conn, stop)
+			}
+		}
+
+		// check stop
+		select {
+		case _, ok := <-stop:
+			if !ok {
+				stopping = true
+			}
+		default:
+			stopping = false
+		}
+
+		if stopping {
+			break
+		}
+	}
+
+	return
+}
+
 // 写分发
 type ConnWriteDispatcher struct {
+	Config *ConnConfig // optional
 }
 
 func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event, stop <-chan bool) (err error) {
@@ -211,46 +278,9 @@ func (self *ConnWriteDispatcher) DispatchLoop(queue <-chan *Event, stop <-chan b
 			} else {
 				// drop it
 			}
+		case <-stop:
+			return
 		}
 	}
 	return
-}
-
-// 接收循环
-type ConnAcceptor struct {
-	Handler Handler
-	Factory Factory
-
-	SyncHandler bool // false: accept & async process
-}
-
-func (self *ConnAcceptor) AcceptLoop(listener net.Listener, stop <-chan bool) (err error) {
-	if listener == nil {
-		return errors.New("listener must not be nil")
-	}
-	if stop == nil {
-		return errors.New("stop chan must not be nil")
-	}
-	if self.Handler == nil {
-		return errors.New("Handler must not be nil")
-	}
-	if self.Factory == nil {
-		return errors.New("Factory must not be nil")
-	}
-
-	var net_conn net.Conn
-	for {
-		net_conn, err = listener.Accept()
-		if err != nil {
-			return
-		}
-
-		if conn, _ := self.Factory.NewConn(net_conn); conn != nil {
-			if self.SyncHandler {
-				self.Handler.HandleConn(conn, stop)
-			} else {
-				go self.Handler.HandleConn(conn, stop)
-			}
-		}
-	}
 }

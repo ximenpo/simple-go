@@ -11,7 +11,7 @@ const (
 
 // 事件
 type Event struct {
-	MsgType int   //  msg type
-	Conn    *Conn //  src/target conn
-	Frame   Frame //  msg data
+	Type  int   //  msg type
+	Conn  *Conn //  src/target conn
+	Frame Frame //  msg data
 }
