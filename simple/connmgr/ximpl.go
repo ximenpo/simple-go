@@ -224,7 +224,7 @@ type ConnAcceptor struct {
 	SyncHandler bool // false: accept & async process
 }
 
-func (self *ConnAcceptor) AcceptLoop(listener *net.TCPListener, stop <-chan bool) (err error) {
+func (self *ConnAcceptor) AcceptLoop(listener net.Listener, stop <-chan bool) (err error) {
 	if listener == nil {
 		return errors.New("listener must not be nil")
 	}

@@ -44,5 +44,5 @@ type Dispatcher interface {
 
 // 接收循环
 type Acceptor interface {
-	AcceptLoop(listener *net.TCPListener, stop <-chan bool) error // 处理Accept循环
+	AcceptLoop(listener net.Listener, stop <-chan bool) error // 处理Accept循环
 }
