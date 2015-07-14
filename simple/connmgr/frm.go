@@ -1,7 +1,7 @@
 package connmgr
 
 import (
-	buf "github.com/ximenpo/simple-go/databuf"
+	buf "github.com/ximenpo/simple-go/simple/databuf"
 )
 
 type Frame interface {

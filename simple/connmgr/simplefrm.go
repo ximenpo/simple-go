@@ -3,7 +3,7 @@ package connmgr
 import (
 	"encoding/binary"
 	"errors"
-	buf "github.com/ximenpo/simple-go/databuf"
+	buf "github.com/ximenpo/simple-go/simple/databuf"
 )
 
 //
