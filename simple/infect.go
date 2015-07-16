@@ -19,7 +19,7 @@ func Infect(struct_obj interface{}, value interface{}) (int, error) {
 	)
 }
 
-func InfectByName(struct_obj interface{}, name string, value interface{}) (int, error) {
+func InfectByName(struct_obj interface{}, value interface{}, name string) (int, error) {
 	if err := _infectCheckParams(struct_obj, value); err != nil {
 		return 0, err
 	}
