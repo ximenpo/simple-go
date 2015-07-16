@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func InfectFields(struct_obj interface{}, value interface{}) (int, error) {
+func Infect(struct_obj interface{}, value interface{}) (int, error) {
 	if err := _infectCheckParams(struct_obj, value); err != nil {
 		return 0, err
 	}
@@ -19,7 +19,7 @@ func InfectFields(struct_obj interface{}, value interface{}) (int, error) {
 	)
 }
 
-func InfectFieldsByName(struct_obj interface{}, name string, value interface{}) (int, error) {
+func InfectByName(struct_obj interface{}, name string, value interface{}) (int, error) {
 	if err := _infectCheckParams(struct_obj, value); err != nil {
 		return 0, err
 	}
@@ -33,7 +33,7 @@ func InfectFieldsByName(struct_obj interface{}, name string, value interface{}) 
 	)
 }
 
-func _infectCheckParams(struct_obj interface{}, value interface{}) error {
+func _infectCheckObj(struct_obj interface{}) error {
 	if struct_obj == nil {
 		return errors.New("struct_obj must not be nil")
 	}
@@ -43,6 +43,13 @@ func _infectCheckParams(struct_obj interface{}, value interface{}) error {
 	}
 	if T.Elem().Kind() != reflect.Struct {
 		return errors.New("struct_obj must be struct object pointer")
+	}
+	return nil
+}
+
+func _infectCheckParams(struct_obj interface{}, value interface{}) error {
+	if err := _infectCheckObj(struct_obj); err != nil {
+		return nil
 	}
 
 	if value == nil {

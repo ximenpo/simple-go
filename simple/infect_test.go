@@ -32,7 +32,7 @@ func Test_InfectFieldsByType(t *testing.T) {
 
 	s := TestS{}
 	var a TestIntfA = &s
-	sum, err := InfectFields(&obj, &a)
+	sum, err := Infect(&obj, &a)
 	if err != nil {
 		t.Error(err)
 	}

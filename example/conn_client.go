@@ -11,18 +11,16 @@ import (
 func main() {
 
 	evt_queue := make(chan *Event, 10)
-	var client = ConnClient{
-		Factory: &ConnFactory{
-			ReadQueue: evt_queue,
+	var client = &ConnHandler{
+		Reader: &ConnReader{
+			FrameReader: &SimpleFrameReader{},
 		},
-		Handler: &ConnHandler{
-			Reader: &ConnReader{
-				FrameReader: &SimpleFrameReader{},
-			},
-			Writer: &ConnWriter{
-				FrameWriter: &SimpleFrameWriter{},
-			},
+		Writer: &ConnWriter{
+			FrameWriter: &SimpleFrameWriter{},
 		},
+	}
+	var factory = &ConnFactory{
+		ReadQueue: evt_queue,
 	}
 
 	net_conn, err := net.Dial("tcp", ":8080")
@@ -34,7 +32,7 @@ func main() {
 
 	sig_stop := make(chan bool)
 
-	conn, err := client.Factory.NewConn(net_conn)
+	conn, err := factory.NewConn(net_conn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,6 +50,11 @@ func main() {
 					if evt.Frame != nil {
 						log.Println(evt.Frame.FrameData().Dump())
 					}
+
+					if evt.Type == DISCONNECTED {
+						close(sig_stop)
+						close(evt_queue)
+					}
 				}
 			}
 		case <-time.After(time.Second * 5):
@@ -64,11 +67,6 @@ func main() {
 					conn,
 					&SimpleFrame{buf},
 				}
-				//if _, ok = <-sig_stop; ok {
-				//	close(sig_stop)
-				//} else {
-				//	close(evt_queue)
-				//}
 			}
 		}
 
@@ -77,7 +75,5 @@ func main() {
 		}
 	}
 
-	close(sig_stop)
-	close(evt_queue)
 	log.Println("client stopped")
 }
