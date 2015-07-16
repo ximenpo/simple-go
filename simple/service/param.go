@@ -17,7 +17,7 @@ func (self Params) String() string {
 }
 
 func (self Params) Valid() bool {
-	return (self.Type != "") && (self.ID != "")
+	return (self.Type != "") || (self.ID != "")
 }
 
 func (self *Params) LoadFromFlag() error {
