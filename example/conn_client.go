@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	. "github.com/ximenpo/simple-go/simple/connmgr"
-	. "github.com/ximenpo/simple-go/simple/databuf"
 	"log"
 	"net"
 	"time"
@@ -59,13 +59,10 @@ func main() {
 			}
 		case <-time.After(time.Second * 5):
 			{
-				var buf Buffer
-				NewDataWriter(&buf).Write("0123456789")
-
 				conn.WriteQueue <- &Event{
 					MESSAGE,
 					conn,
-					&SimpleFrame{buf},
+					&SimpleFrame{bytes.NewBufferString("0123456789")},
 				}
 			}
 		}

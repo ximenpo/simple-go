@@ -1,9 +1,9 @@
 package connmgr
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
-	buf "github.com/ximenpo/simple-go/simple/databuf"
 )
 
 //
@@ -12,11 +12,14 @@ import (
 //  |--body_len(2byte)--|----body----|
 //
 type SimpleFrame struct {
-	Buf buf.Buffer
+	Buf *bytes.Buffer
 }
 
 func (self *SimpleFrame) FrameData() []byte {
-	return self.Buf.Data()
+	if self.Buf == nil {
+		return nil
+	}
+	return self.Buf.Bytes()
 }
 
 // 读取幀数据
@@ -41,8 +44,7 @@ func (self *SimpleFrameReader) ReadFrame(conn *Conn) (frame Frame, err error) {
 		}
 	}
 
-	frm := &SimpleFrame{}
-	frm.Buf.Assign(body)
+	frm := &SimpleFrame{bytes.NewBuffer(body)}
 	return frm, nil
 }
 
