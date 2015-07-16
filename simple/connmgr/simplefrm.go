@@ -12,11 +12,11 @@ import (
 //  |--body_len(2byte)--|----body----|
 //
 type SimpleFrame struct {
-	Data buf.Buffer
+	Buf buf.Buffer
 }
 
-func (self *SimpleFrame) FrameData() *buf.Buffer {
-	return &self.Data
+func (self *SimpleFrame) FrameData() []byte {
+	return self.Buf.Data()
 }
 
 // 读取幀数据
@@ -42,7 +42,7 @@ func (self *SimpleFrameReader) ReadFrame(conn *Conn) (frame Frame, err error) {
 	}
 
 	frm := &SimpleFrame{}
-	frm.Data.Assign(body)
+	frm.Buf.Assign(body)
 	return frm, nil
 }
 
@@ -59,7 +59,7 @@ func (self *SimpleFrameWriter) WriteFrame(conn *Conn, frame Frame) (err error) {
 
 	var body = frame.FrameData()
 	if body != nil {
-		body_len = uint16(body.Size())
+		body_len = uint16(len(body))
 	}
 
 	if err = binary.Write(conn.NetConn, binary.BigEndian, body_len); err != nil {
@@ -67,7 +67,7 @@ func (self *SimpleFrameWriter) WriteFrame(conn *Conn, frame Frame) (err error) {
 	}
 
 	if body_len > 0 {
-		if err = binary.Write(conn.NetConn, binary.BigEndian, body.Data()); err != nil {
+		if err = binary.Write(conn.NetConn, binary.BigEndian, body); err != nil {
 			return
 		}
 	}

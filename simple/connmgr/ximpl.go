@@ -87,10 +87,6 @@ func (self *ConnReader) ReadLoop(conn *Conn, stop <-chan bool) (err error) {
 			return errors.New("ReadFrame returns nil Frame")
 		}
 
-		if data := evt.Frame.FrameData(); data != nil {
-			data.Rewind()
-		}
-
 		conn.ReadQueue <- evt
 	}
 	return

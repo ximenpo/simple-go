@@ -48,7 +48,7 @@ func main() {
 				} else {
 					log.Println(evt.Conn, evt.Type)
 					if evt.Frame != nil {
-						log.Println(evt.Frame.FrameData().Dump())
+						log.Println(evt.Frame.FrameData())
 					}
 
 					if evt.Type == DISCONNECTED {

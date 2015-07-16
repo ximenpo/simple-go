@@ -1,11 +1,7 @@
 package connmgr
 
-import (
-	buf "github.com/ximenpo/simple-go/simple/databuf"
-)
-
 type Frame interface {
-	FrameData() *buf.Buffer //  data content
+	FrameData() []byte //  data content
 }
 
 type FrameReader interface {
