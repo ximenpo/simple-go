@@ -69,7 +69,7 @@ func LoadData_FromRedis(addr string) (data []byte, err error) {
 	var db int
 	var key string
 	{
-		re, _ := regexp.Compile("^[0-9][0-9]?/(.+)$")
+		re, _ := regexp.Compile("^[0-9]+/(.+)$")
 		if re.MatchString(redis_key) {
 			r := re.FindAllStringSubmatch(redis_key, -1)
 			if r == nil {
